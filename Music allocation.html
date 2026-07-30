@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學生樂器訓練班名單管理系統</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 FontAwesome 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入 Tom Select 樣式（支援搜尋功能的下拉選單） -->
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- 標題區 -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-slate-900 mb-2 flex items-center justify-center gap-3">
+                <i class="fa-solid fa-music text-indigo-600"></i> 1A班 學生樂器訓練名單
+            </h1>
+            <p class="text-slate-500">總學生人數：<span id="total-count" class="font-semibold text-slate-700">0</span> 人</p>
+        </header>
+
+        <!-- 統計卡片 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-400 font-medium">總人數</p>
+                    <h3 id="stat-total" class="text-2xl font-bold text-slate-800">0</h3>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-drum"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-400 font-medium">樂器種類</p>
+                    <h3 id="stat-instruments" class="text-2xl font-bold text-slate-800">0</h3>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-clock"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-400 font-medium">上課時段組合</p>
+                    <h3 id="stat-times" class="text-2xl font-bold text-slate-800">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- 搜尋與篩選控制區 -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-8 flex flex-col lg:flex-row gap-4 justify-between items-center">
+            
+            <!-- 下拉選擇學生姓名 -->
+            <div class="w-full lg:w-1/3">
+                <select id="student-select" placeholder="請選擇或搜尋學生姓名...">
+                    <option value="">全部學生 (All Students)</option>
+                </select>
+            </div>
+            
+            <div class="w-full lg:w-2/3 flex flex-col sm:flex-row gap-4 justify-end">
+                <select id="instrument-filter" class="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    <option value="">所有樂器 (All Instruments)</option>
+                </select>
+                <select id="time-filter" class="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    <option value="">所有上課時間 (All Times)</option>
+                </select>
+                <button id="reset-btn" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium rounded-xl text-sm transition-colors whitespace-nowrap">
+                    重設篩選
+                </button>
+            </div>
+        </div>
+
+        <!-- 表格區 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/75 border-b border-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                            <th class="py-4 px-6 font-semibold">ID</th>
+                            <th class="py-4 px-6 font-semibold">班別</th>
+                            <th class="py-4 px-6 font-semibold">姓名</th>
+                            <th class="py-4 px-6 font-semibold">樂器</th>
+                            <th class="py-4 px-6 font-semibold">上課時間</th>
+                        </tr>
+                    </thead>
+                    <tbody id="student-table-body" class="divide-y divide-slate-100 text-sm">
+                        <!-- 動態生成內容 -->
+                    </tbody>
+                </table>
+            </div>
+            <!-- 無資料提示 -->
+            <div id="no-data" class="hidden py-12 text-center text-slate-400">
+                <i class="fa-solid fa-face-frown text-3xl mb-2"></i>
+                <p>找不到符合條件的學生資料</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 邏輯與資料 -->
+    <script>
+        const students = [
+          { class: '1A', id: 1, name: '陳凡語', instrument: 'Trumpet (A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 2, name: '吳雨嫣', instrument: 'Trumpet (A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 3, name: '陳泰羽', instrument: 'Trumpet (A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 4, name: '蔡欣恒', instrument: 'Trumpet (A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 5, name: '郭芯妤', instrument: 'Trumpet (A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 6, name: '林愷晉', instrument: 'Trumpet (A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 7, name: '蔡柏鉉', instrument: 'Trumpet (A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 8, name: '梁靖瑤', instrument: 'Trumpet (A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 9, name: '黃子軒', instrument: 'Trumpet (A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 10, name: '吳思翰', instrument: 'Trumpet (A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 11, name: '彭康宇', instrument: 'Trombone(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 12, name: '巫昊謙', instrument: 'Trombone(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 13, name: '吳俊樂', instrument: 'Trombone(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 14, name: '周奕宇', instrument: 'Trombone(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 15, name: '李洺圻', instrument: 'Trombone(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 16, name: '章惠琪', instrument: 'Trombone(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 17, name: '李綺雯', instrument: 'Trombone(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 18, name: '楊子興', instrument: 'Trombone(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 19, name: '石芯悦', instrument: 'Trombone(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 20, name: '黎皓軒', instrument: 'Trumpet(B)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 21, name: '曾詡博', instrument: 'Trumpet(B)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 22, name: '黃紫嫣', instrument: 'Trumpet(B)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 23, name: '吳禹霆', instrument: 'Trumpet(B)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 24, name: '黃俊希', instrument: 'Trumpet(B)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 25, name: '賴培植', instrument: 'Trumpet(B)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 26, name: '吳澤浠', instrument: 'Trombone (B)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 27, name: '梁玥悠', instrument: 'Trombone (B)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 28, name: '梁茵桐', instrument: 'Trombone (B)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 29, name: '張敏晶', instrument: 'Trombone (B)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 30, name: '彭星澔', instrument: 'Trombone (B)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 31, name: '潘俊麟', instrument: 'Trombone (B)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 32, name: '陳立燁', instrument: 'Trombone (B)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 33, name: '李研湘', instrument: 'Trombone (B)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 34, name: '張晉霖', instrument: 'Horn(B)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 35, name: '楊凱澄', instrument: 'Horn(B)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 36, name: '梁祐瑋', instrument: 'Horn(B)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 37, name: '蒲梓菡', instrument: 'Horn(B)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 38, name: '鄺祺添', instrument: 'Horn(B)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 39, name: '黃藝之', instrument: 'Horn(B)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 40, name: '陳斈澧', instrument: 'Horn(B)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 41, name: '陳穎悕', instrument: 'Horn(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 42, name: '梁芷淳', instrument: 'Horn(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 43, name: '黃信宇', instrument: 'Horn(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 44, name: '李峻林', instrument: 'Horn(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 45, name: '鄺雯茵', instrument: 'Horn(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 46, name: '陳祉瑩', instrument: 'Horn(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 47, name: '鍾筱怡', instrument: 'Horn(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 48, name: '王嘉豪', instrument: 'Horn(A)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 49, name: '潘冠廷', instrument: 'Horn(C )', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 50, name: '曾温愉', instrument: 'Horn(C )', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 51, name: '劉思雅', instrument: 'Horn(C )', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 52, name: '刁靖攸', instrument: 'Horn(C )', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 53, name: '劉焯楠', instrument: 'Horn(C )', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 54, name: '倪樂霖', instrument: 'Horn(C )', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 55, name: '王濼游', instrument: 'Horn(C )', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 56, name: '張皓然', instrument: 'Horn(D )', time: '星期五: 13:25-14:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 57, name: '譚茝元', instrument: 'Horn(D )', time: '星期五: 13:25-14:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 58, name: '劉穎宜', instrument: 'Horn(D )', time: '星期五: 13:25-14:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 59, name: '黃子瑜', instrument: 'Horn(D )', time: '星期五: 13:25-14:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 60, name: '周筱柔', instrument: 'Horn(D )', time: '星期五: 13:25-14:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 61, name: '吳煜曦', instrument: 'Horn(D )', time: '星期五: 13:25-14:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 62, name: '崔日星', instrument: 'Horn(D )', time: '星期五: 13:25-14:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 63, name: '鄭仲恩', instrument: 'Trumpet (C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 64, name: '蘇逸朗', instrument: 'Trumpet (C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 65, name: '王俊熙', instrument: 'Trumpet (C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 66, name: '叶紫童', instrument: 'Trumpet (C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 67, name: '陳梓軒', instrument: 'Trumpet (C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 68, name: '譚暘熹', instrument: 'Trumpet (C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 69, name: '丘貝儿', instrument: 'Trumpet (C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 70, name: '梁睿烨', instrument: 'Trumpet (C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 71, name: '張智南', instrument: 'Trumpet (D )', time: '星期一: 13:25-14:25; 星期五:15:25-16:25' },
+          { class: '1A', id: 72, name: '李芷潼', instrument: 'Trumpet (D )', time: '星期一: 13:25-14:25; 星期五:15:25-16:25' },
+          { class: '1A', id: 73, name: '梅峻飛', instrument: 'Trumpet (D )', time: '星期一: 13:25-14:25; 星期五:15:25-16:25' },
+          { class: '1A', id: 74, name: '黃樂賢', instrument: 'Trumpet (D )', time: '星期一: 13:25-14:25; 星期五:15:25-16:25' },
+          { class: '1A', id: 75, name: '蔡昀晁', instrument: 'Trumpet (D )', time: '星期一: 13:25-14:25; 星期五:15:25-16:25' },
+          { class: '1A', id: 76, name: '郭沛嘉', instrument: 'Trumpet (D )', time: '星期一: 13:25-14:25; 星期五:15:25-16:25' },
+          { class: '1A', id: 77, name: '蕭榮德', instrument: 'Trumpet (D )', time: '星期一: 13:25-14:25; 星期五:15:25-16:25' },
+          { class: '1A', id: 78, name: '黃曦敏', instrument: 'Trumpet (D )', time: '星期一: 13:25-14:25; 星期五:15:25-16:25' },
+          { class: '1A', id: 79, name: '吳芊凝', instrument: 'Trumpet (D )', time: '星期一: 13:25-14:25; 星期五:15:25-16:25' },
+          { class: '1A', id: 80, name: '李遠航', instrument: 'Trumpet (D )', time: '星期一: 13:25-14:25; 星期五:15:25-16:25' },
+          { class: '1A', id: 81, name: '梁載昕', instrument: 'Trombone( C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 82, name: '黃俊添', instrument: 'Trombone( C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 83, name: '梁梓煒', instrument: 'Trombone( C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 84, name: '羅曦蕎', instrument: 'Trombone( C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 85, name: '余嘉樂', instrument: 'Trombone( C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 86, name: '馬智暉', instrument: 'Trombone( C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 87, name: '劉賜希', instrument: 'Trombone( C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 88, name: '鄧英碩', instrument: 'Trombone( C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 89, name: '黃金泉', instrument: 'Trombone( C)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 90, name: '駱舒悠', instrument: 'Tuba (A)', time: '星期一: 15:25-16:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 91, name: '曾亦辰', instrument: 'Tuba (A)', time: '星期一: 15:25-16:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 92, name: '容昊恩', instrument: 'Tuba (A)', time: '星期一: 15:25-16:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 93, name: '李智森', instrument: 'Tuba (A)', time: '星期一: 15:25-16:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 94, name: '黃俊澔', instrument: 'Tuba (A)', time: '星期一: 15:25-16:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 95, name: '曾日禧', instrument: 'Tuba (A)', time: '星期一: 15:25-16:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 96, name: '李誠軒', instrument: 'Tuba (B)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 97, name: '連浩淳', instrument: 'Tuba (B)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 98, name: '黃子桓', instrument: 'Tuba (B)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 99, name: '蕭佑天', instrument: 'Tuba (B)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 100, name: '林芷翎', instrument: 'Tuba (B)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 101, name: '郭洺睿', instrument: 'Tuba (B)', time: '星期一: 16:25-17:25; 星期五: 15:25-16:25' },
+          { class: '1A', id: 102, name: '陳諾鋒', instrument: 'Euphonium (A)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 103, name: '陳天樂', instrument: 'Euphonium (A)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 104, name: '林凱澄', instrument: 'Euphonium (A)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 105, name: '蕭玥喬', instrument: 'Euphonium (A)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 106, name: '彭心莹', instrument: 'Euphonium (A)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 107, name: '曾梓軒', instrument: 'Euphonium (A)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 108, name: '王安佐', instrument: 'Euphonium (A)', time: '星期一: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 109, name: '彭康曜', instrument: 'Euphonium (B)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 110, name: '黃靖柔', instrument: 'Euphonium (B)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 111, name: '刁濼楒', instrument: 'Euphonium (B)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 112, name: '陳奕楠', instrument: 'Euphonium (B)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 113, name: '馮玥蕎', instrument: 'Euphonium (B)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 114, name: '譚家祺', instrument: 'Euphonium (B)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 115, name: '鄧梓聖', instrument: 'Euphonium (B)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 116, name: '施灃洋', instrument: 'Horn (E)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 117, name: '高嘉慧', instrument: 'Horn (E)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 118, name: '李逸航', instrument: 'Horn (E)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 119, name: '廖潁鏇', instrument: 'Horn (E)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 120, name: '魏瑋宣', instrument: 'Horn (E)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 121, name: '周芊羽', instrument: 'Horn (E)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 122, name: '關瑋樂', instrument: 'Horn (E)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 123, name: '曾裕航', instrument: 'Horn (F)', time: '星期一: 16:25-17:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 124, name: '林楷哲', instrument: 'Horn (F)', time: '星期一: 16:25-17:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 125, name: '李玟澄', instrument: 'Horn (F)', time: '星期一: 16:25-17:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 126, name: '吳俊宇', instrument: 'Horn (F)', time: '星期一: 16:25-17:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 127, name: '張芷淞', instrument: 'Horn (F)', time: '星期一: 16:25-17:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 128, name: '馬芷希', instrument: 'Horn (F)', time: '星期一: 16:25-17:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 129, name: '張曉晴', instrument: 'Trombone (D)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 130, name: '劉釗銘', instrument: 'Trombone (D)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 131, name: '王和志', instrument: 'Trombone (D)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 132, name: '梁耕榜', instrument: 'Trombone (D)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 133, name: '盧馨兒', instrument: 'Trombone (D)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 134, name: '陳睿鋒', instrument: 'Trombone (D)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 135, name: '梁學尊', instrument: 'Trombone (D)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 136, name: '陳俊霖', instrument: 'Trombone (D)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 137, name: '譚家豪', instrument: 'Trombone (D)', time: '星期五: 13:25-14:25; 星期五:14:25-15:25' },
+          { class: '1A', id: 138, name: '洪恩熙', instrument: 'Trumpet (E)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 139, name: '蘇感梧', instrument: 'Trumpet (E)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 140, name: '林澤凱', instrument: 'Trumpet (E)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 141, name: '仝峻琦', instrument: 'Trumpet (E)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 142, name: '陳穎泓', instrument: 'Trumpet (E)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 143, name: '程楚元', instrument: 'Trumpet (E)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 144, name: '鄭詠橦', instrument: 'Trumpet (E)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 145, name: '黃芊潼', instrument: 'Trumpet (E)', time: '星期一: 15:25-16:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 146, name: '李柏霖', instrument: 'Trumpet (F)', time: '星期一: 16:25-17:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 147, name: '關琛諾', instrument: 'Trumpet (F)', time: '星期一: 16:25-17:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 148, name: '郭曜朗', instrument: 'Trumpet (F)', time: '星期一: 16:25-17:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 149, name: '許明晞', instrument: 'Trumpet (F)', time: '星期一: 16:25-17:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 150, name: '莊浠傑', instrument: 'Trumpet (F)', time: '星期一: 16:25-17:25; 星期五: 14:25-15:25' },
+          { class: '1A', id: 151, name: '周傑熹', instrument: 'Trumpet (F)', time: '星期一: 16:25-17:25; 星期五: 14:25-15:25' }
+        ];
+
+        const tableBody = document.getElementById('student-table-body');
+        const instrumentFilter = document.getElementById('instrument-filter');
+        const timeFilter = document.getElementById('time-filter');
+        const resetBtn = document.getElementById('reset-btn');
+        const noData = document.getElementById('no-data');
+        const totalCountSpan = document.getElementById('total-count');
+        
+        const statTotal = document.getElementById('stat-total');
+        const statInstruments = document.getElementById('stat-instruments');
+        const statTimes = document.getElementById('stat-times');
+
+        let studentSelectInstance = null;
+
+        // 初始化所有下拉選單
+        function initFilters() {
+            const studentSelect = document.getElementById('student-select');
+            students.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = `${s.name} (ID: ${s.id})`;
+                studentSelect.appendChild(opt);
+            });
+
+            // 啟用 Tom Select 讓姓名欄位變成可搜尋的下拉選單
+            studentSelectInstance = new TomSelect('#student-select', {
+                create: false,
+                sortField: { field: "text", direction: "asc" },
+                placeholder: "請選擇或搜尋學生姓名..."
+            });
+
+            const instruments = [...new Set(students.map(s => s.instrument))].sort();
+            const times = [...new Set(students.map(s => s.time))].sort();
+
+            instruments.forEach(inst => {
+                const opt = document.createElement('option');
+                opt.value = inst;
+                opt.textContent = inst;
+                instrumentFilter.appendChild(opt);
+            });
+
+            times.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t;
+                timeFilter.appendChild(opt);
+            });
+
+            // 更新統計卡片
+            statTotal.textContent = students.length;
+            statInstruments.textContent = instruments.length;
+            statTimes.textContent = times.length;
+            totalCountSpan.textContent = students.length;
+        }
+
+        // 渲染表格資料
+        function renderTable(data) {
+            tableBody.innerHTML = '';
+            if (data.length === 0) {
+                noData.classList.remove('hidden');
+                return;
+            }
+            noData.classList.add('hidden');
+
+            data.forEach((student, index) => {
+                const tr = document.createElement('tr');
+                tr.className = index % 2 === 0 ? 'bg-white hover:bg-slate-50/50 transition-colors' : 'bg-slate-50/30 hover:bg-slate-50/50 transition-colors';
+                tr.innerHTML = `
+                    <td class="py-3.5 px-6 font-mono text-slate-500">${student.id}</td>
+                    <td class="py-3.5 px-6"><span class="px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-semibold">${student.class}</span></td>
+                    <td class="py-3.5 px-6 font-medium text-slate-900">${student.name}</td>
+                    <td class="py-3.5 px-6"><span class="text-slate-700 font-medium">${student.instrument}</span></td>
+                    <td class="py-3.5 px-6 text-slate-500 text-xs">${student.time}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        // 過濾邏輯
+        function filterData() {
+            const selectedStudentId = document.getElementById('student-select').value;
+            const selectedInst = instrumentFilter.value;
+            const selectedTime = timeFilter.value;
+
+            const filtered = students.filter(student => {
+                const matchStudent = selectedStudentId === '' || student.id.toString() === selectedStudentId;
+                const matchInst = selectedInst === '' || student.instrument === selectedInst;
+                const matchTime = selectedTime === '' || student.time === selectedTime;
+                return matchStudent && matchInst && matchTime;
+            });
+
+            renderTable(filtered);
+            totalCountSpan.textContent = filtered.length;
+        }
+
+        // 事件監聽
+        document.getElementById('student-select').addEventListener('change', filterData);
+        instrumentFilter.addEventListener('change', filterData);
+        timeFilter.addEventListener('change', filterData);
+
+        resetBtn.addEventListener('click', () => {
+            if (studentSelectInstance) {
+                studentSelectInstance.clear();
+            }
+            instrumentFilter.value = '';
+            timeFilter.value = '';
+            filterData();
+        });
+
+        // 初始化執行
+        initFilters();
+        renderTable(students);
+    </script>
+</body>
+</html>
